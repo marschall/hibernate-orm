@@ -150,6 +150,7 @@ import org.hibernate.sql.ast.tree.predicate.ComparisonPredicate;
 import org.hibernate.sql.ast.tree.predicate.ExistsPredicate;
 import org.hibernate.sql.ast.tree.predicate.FilterPredicate;
 import org.hibernate.sql.ast.tree.predicate.GroupedPredicate;
+import org.hibernate.sql.ast.tree.predicate.InListArrayPredicate;
 import org.hibernate.sql.ast.tree.predicate.InListPredicate;
 import org.hibernate.sql.ast.tree.predicate.InSubQueryPredicate;
 import org.hibernate.sql.ast.tree.predicate.Junction;
@@ -6820,6 +6821,31 @@ public abstract class AbstractSqlAstTranslator<T extends JdbcOperation> implemen
 			}
 		}
 		appendSql( CLOSE_PARENTHESIS );
+	}
+	
+
+	@Override
+	public void visitInListArrayPredicate(InListArrayPredicate inListArrayPredicate) {
+		inListArrayPredicate.getTestExpression().accept( this );
+
+		appendSql( openInListArray( inListArrayPredicate.isNegated() ) );
+
+		inListArrayPredicate.getArrayExpression().accept( this );
+
+		appendSql( closeInListArray() );
+	}
+	
+	protected String openInListArray(boolean negated) {
+		if ( negated ) {
+			return " != ANY(";
+		}
+		else {
+			return " = ANY(";
+		}
+	}
+	
+	protected String closeInListArray() {
+		return ")";
 	}
 
 	@Override

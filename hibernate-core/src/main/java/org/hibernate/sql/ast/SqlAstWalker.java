@@ -54,6 +54,7 @@ import org.hibernate.sql.ast.tree.predicate.ComparisonPredicate;
 import org.hibernate.sql.ast.tree.predicate.ExistsPredicate;
 import org.hibernate.sql.ast.tree.predicate.FilterPredicate;
 import org.hibernate.sql.ast.tree.predicate.GroupedPredicate;
+import org.hibernate.sql.ast.tree.predicate.InListArrayPredicate;
 import org.hibernate.sql.ast.tree.predicate.InListPredicate;
 import org.hibernate.sql.ast.tree.predicate.InSubQueryPredicate;
 import org.hibernate.sql.ast.tree.predicate.Junction;
@@ -185,6 +186,8 @@ public interface SqlAstWalker {
 	void visitGroupedPredicate(GroupedPredicate groupedPredicate);
 
 	void visitInListPredicate(InListPredicate inListPredicate);
+
+	void visitInListArrayPredicate(InListArrayPredicate inListArrayPredicate);
 
 	void visitInSubQueryPredicate(InSubQueryPredicate inSubQueryPredicate);
 

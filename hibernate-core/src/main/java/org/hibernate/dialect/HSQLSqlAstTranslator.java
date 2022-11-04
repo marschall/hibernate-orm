@@ -284,6 +284,21 @@ public class HSQLSqlAstTranslator<T extends JdbcOperation> extends AbstractSqlAs
 		return getFromDual();
 	}
 
+	@Override
+	protected String openInListArray(boolean negated) {
+		if ( negated ) {
+			return " not IN(UNNEST(";
+		}
+		else {
+			return " IN(UNNEST(";
+		}
+	}
+
+	@Override
+	protected String closeInListArray() {
+		return "))";
+	}
+
 	private boolean supportsOffsetFetchClause() {
 		return true;
 	}

@@ -486,6 +486,21 @@ public class OracleSqlAstTranslator<T extends JdbcOperation> extends AbstractSql
 		return getFromDual();
 	}
 
+	@Override
+	protected String openInListArray(boolean negated) {
+		if ( negated ) {
+			return " not IN(SELECT column_value FROM TABLE(";
+		}
+		else {
+			return " IN(SELECT column_value FROM TABLE(";
+		}
+	}
+
+	@Override
+	protected String closeInListArray() {
+		return "))";
+	}
+
 	private boolean supportsOffsetFetchClause() {
 		return getDialect().supportsFetchClause( FetchClauseType.ROWS_ONLY );
 	}
