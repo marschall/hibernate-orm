@@ -56,10 +56,13 @@ import org.hibernate.query.spi.QueryEngine;
 import org.hibernate.query.sqm.FetchClauseType;
 import org.hibernate.query.sqm.IntervalType;
 import org.hibernate.query.sqm.TemporalUnit;
+import org.hibernate.query.sqm.function.NamedSqmFunctionDescriptor;
 import org.hibernate.query.sqm.mutation.internal.cte.CteInsertStrategy;
 import org.hibernate.query.sqm.mutation.internal.cte.CteMutationStrategy;
 import org.hibernate.query.sqm.mutation.spi.SqmMultiTableInsertStrategy;
 import org.hibernate.query.sqm.mutation.spi.SqmMultiTableMutationStrategy;
+import org.hibernate.query.sqm.produce.function.StandardArgumentsValidators;
+import org.hibernate.query.sqm.produce.function.StandardFunctionReturnTypeResolvers;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.sql.ast.SqlAstTranslator;
 import org.hibernate.sql.ast.SqlAstTranslatorFactory;
@@ -68,6 +71,7 @@ import org.hibernate.sql.ast.spi.StandardSqlAstTranslatorFactory;
 import org.hibernate.sql.ast.tree.Statement;
 import org.hibernate.sql.exec.spi.JdbcOperation;
 import org.hibernate.type.JavaObjectType;
+import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayJavaType;
 import org.hibernate.type.descriptor.jdbc.AggregateJdbcType;
 import org.hibernate.type.descriptor.jdbc.ArrayJdbcType;
@@ -521,6 +525,7 @@ public class PostgreSQLDialect extends Dialect {
 	public void initializeFunctionRegistry(QueryEngine queryEngine) {
 		super.initializeFunctionRegistry( queryEngine );
 
+		TypeConfiguration typeConfiguration = queryEngine.getTypeConfiguration();
 		CommonFunctionFactory functionFactory = new CommonFunctionFactory(queryEngine);
 
 		functionFactory.round_roundFloor(); //Postgres round(x,n) does not accept double
@@ -588,6 +593,15 @@ public class PostgreSQLDialect extends Dialect {
 			queryEngine.getSqmFunctionRegistry().register( "min", new PostgreSQLMinMaxFunction( "min" ) );
 			queryEngine.getSqmFunctionRegistry().register( "max", new PostgreSQLMinMaxFunction( "max" ) );
 		}
+		queryEngine.getSqmFunctionRegistry().register(
+				"array_contains",
+				new NamedSqmFunctionDescriptor(
+						"ANY",
+						true,
+						StandardArgumentsValidators.exactly( 1 ),
+						StandardFunctionReturnTypeResolvers.impliedType()
+				)
+		);
 	}
 
 	/**

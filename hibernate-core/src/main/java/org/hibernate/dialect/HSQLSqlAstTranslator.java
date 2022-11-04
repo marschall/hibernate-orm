@@ -27,6 +27,7 @@ import org.hibernate.sql.ast.tree.expression.Summarization;
 import org.hibernate.sql.ast.tree.predicate.BooleanExpressionPredicate;
 import org.hibernate.sql.ast.tree.select.QueryPart;
 import org.hibernate.sql.exec.spi.JdbcOperation;
+import org.hibernate.type.SqlTypes;
 import org.hibernate.type.descriptor.jdbc.ArrayJdbcType;
 
 /**
@@ -222,6 +223,28 @@ public class HSQLSqlAstTranslator<T extends JdbcOperation> extends AbstractSqlAs
 			return;
 		}
 		switch ( operator ) {
+			case EQUAL:
+				if ( lhsExpressionType.getJdbcMappings().get( 0 ).getJdbcType().getJdbcTypeCode() == SqlTypes.ARRAY ) {
+					lhs.accept( this );
+					appendSql( " IN(" );
+					rhs.accept( this );
+					appendSql( ')' );
+				}
+				else {
+					renderComparisonStandard( lhs, operator, rhs );
+				}
+				break;
+			case NOT_EQUAL:
+				if ( lhsExpressionType.getJdbcMappings().get( 0 ).getJdbcType().getJdbcTypeCode() == SqlTypes.ARRAY ) {
+					lhs.accept( this );
+					appendSql( " NOT IN(" );
+					rhs.accept( this );
+					appendSql( ')' );
+				}
+				else {
+					renderComparisonStandard( lhs, operator, rhs );
+				}
+				break;
 			case DISTINCT_FROM:
 			case NOT_DISTINCT_FROM:
 				if ( lhsExpressionType.getJdbcMappings().get( 0 ).getJdbcType() instanceof ArrayJdbcType ) {

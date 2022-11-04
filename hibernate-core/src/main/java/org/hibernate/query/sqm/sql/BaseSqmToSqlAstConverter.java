@@ -33,7 +33,9 @@ import org.hibernate.HibernateException;
 import org.hibernate.Internal;
 import org.hibernate.LockMode;
 import org.hibernate.QueryException;
+import org.hibernate.annotations.common.reflection.java.generics.ParameterizedTypeImpl;
 import org.hibernate.boot.model.process.internal.InferredBasicValueResolver;
+import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.function.TimestampaddFunction;
 import org.hibernate.dialect.function.TimestampdiffFunction;
 import org.hibernate.engine.FetchTiming;
@@ -132,8 +134,10 @@ import org.hibernate.query.sqm.SqmQuerySource;
 import org.hibernate.query.sqm.TemporalUnit;
 import org.hibernate.query.sqm.UnaryArithmeticOperator;
 import org.hibernate.query.sqm.function.AbstractSqmSelfRenderingFunctionDescriptor;
+import org.hibernate.query.sqm.function.FunctionRenderingSupport;
 import org.hibernate.query.sqm.function.SelfRenderingAggregateFunctionSqlAstExpression;
 import org.hibernate.query.sqm.function.SelfRenderingFunctionSqlAstExpression;
+import org.hibernate.query.sqm.function.SqmFunctionDescriptor;
 import org.hibernate.query.sqm.internal.DomainParameterXref;
 import org.hibernate.query.sqm.internal.SqmMappingModelHelper;
 import org.hibernate.query.sqm.mutation.internal.SqmInsertStrategyHelper;
@@ -385,14 +389,19 @@ import org.hibernate.sql.results.graph.instantiation.internal.DynamicInstantiati
 import org.hibernate.sql.results.graph.internal.ImmutableFetchList;
 import org.hibernate.sql.results.internal.SqlSelectionImpl;
 import org.hibernate.sql.results.internal.StandardEntityGraphTraversalStateImpl;
+import org.hibernate.tool.schema.extract.spi.ColumnTypeInformation;
+import org.hibernate.type.BasicArrayType;
 import org.hibernate.type.BasicType;
+import org.hibernate.type.BasicTypeReference;
 import org.hibernate.type.CustomType;
 import org.hibernate.type.EnumType;
 import org.hibernate.type.JavaObjectType;
 import org.hibernate.type.SqlTypes;
+import org.hibernate.type.descriptor.java.BasicPluralJavaType;
 import org.hibernate.type.descriptor.java.EnumJavaType;
 import org.hibernate.type.descriptor.java.JavaType;
 import org.hibernate.type.descriptor.java.TemporalJavaType;
+import org.hibernate.type.descriptor.jdbc.ArrayJdbcType;
 import org.hibernate.type.descriptor.jdbc.JdbcType;
 import org.hibernate.type.descriptor.jdbc.JdbcTypeIndicators;
 import org.hibernate.type.spi.TypeConfiguration;
@@ -6103,6 +6112,13 @@ public abstract class BaseSqmToSqlAstConverter<T extends Statement> extends Base
 						.getQueryEngine().getSqmFunctionRegistry()
 						.findFunctionDescriptor( "timestampdiff" );
 	}
+	
+	private FunctionRenderingSupport array_contains() {
+		return (FunctionRenderingSupport)
+				getCreationContext().getSessionFactory()
+				.getQueryEngine().getSqmFunctionRegistry()
+				.findFunctionDescriptor( "array_contains" );
+	}
 
 	private <X> X cleanly(Supplier<X> supplier) {
 		SqmByUnit byUnit = appliedByUnit;
@@ -7024,11 +7040,65 @@ public abstract class BaseSqmToSqlAstConverter<T extends Statement> extends Base
 		return processInSingleParameter( sqmPredicate, sqmWrapper, jpaCriteriaParameter, domainParamBinding );
 	}
 
-	@SuppressWarnings( "rawtypes" )
 	private Predicate processInSingleParameter(
 			SqmInListPredicate<?> sqmPredicate,
 			SqmParameter<?> sqmParameter,
 			QueryParameterImplementor<?> domainParam,
+			QueryParameterBinding<?> domainParamBinding) {
+		
+		final Dialect dialect = creationContext.getSessionFactory().getJdbcServices().getDialect();
+		if ( dialect.supportsStandardArrays() && (domainParamBinding.getBindType() instanceof Type<?>) ) {
+			Type<?> type = (Type<?>) domainParamBinding.getBindType();
+			if (type.getPersistenceType() == Type.PersistenceType.BASIC) {
+				return wrapAsArraySingleParameter( sqmPredicate, sqmParameter, domainParam, domainParamBinding );
+			}
+		}
+		return expandInSingleParameter( sqmPredicate, sqmParameter, domainParam, domainParamBinding );
+	}
+	
+	private Predicate wrapAsArraySingleParameter(SqmInListPredicate<?> sqmPredicate, SqmParameter<?> sqmParameter, QueryParameterImplementor<?> domainParam,
+			QueryParameterBinding<?> domainParamBinding) {
+		TypeConfiguration typeConfiguration = creationContext.getSessionFactory().getTypeConfiguration();
+
+		// Resolve the expression type to infer for list elements
+		final FromClauseIndex fromClauseIndex = fromClauseIndexStack.getCurrent();
+		final MappingModelExpressible<?> mappingModelExpressible = determineValueMapping(
+				sqmPredicate.getTestExpression(),
+				fromClauseIndex
+				);
+		final JdbcMapping jdbcMapping = mappingModelExpressible.getJdbcMappings().get( 0 );
+
+		final Object javaArray = java.lang.reflect.Array.newInstance( jdbcMapping.getMappedJavaType().getJavaTypeClass(), 0 );
+
+		final java.lang.reflect.Type[] typeArguments = new java.lang.reflect.Type[]{ jdbcMapping.getMappedJavaType().getJavaType() };
+		final BasicPluralJavaType<Object> arrayJavaType = (BasicPluralJavaType<Object>) typeConfiguration.getJavaTypeRegistry()
+				.getDescriptor( javaArray.getClass() )
+				.createJavaType(
+						new ParameterizedTypeImpl(Collection.class, typeArguments, null),
+						typeConfiguration
+						);
+		final BasicType<?> arrayType = arrayJavaType.resolveType(
+				typeConfiguration,
+				creationContext.getSessionFactory().getJdbcServices().getDialect(),
+				(BasicType<Object>) jdbcMapping,
+				ColumnTypeInformation.EMPTY
+				);
+
+		return new ComparisonPredicate(
+				(Expression) sqmPredicate.getTestExpression().accept( this ),
+				sqmPredicate.isNegated() ? ComparisonOperator.NOT_EQUAL : ComparisonOperator.EQUAL,
+						new SelfRenderingFunctionSqlAstExpression(
+								"array_contains",
+								array_contains(),
+								Collections.singletonList( consumeSqmParameter( sqmParameter, arrayType, (integer, jdbcParameter) -> {} ) ),
+								(BasicType) jdbcMapping,
+								mappingModelExpressible
+						)
+				);
+	}
+
+	@SuppressWarnings( "rawtypes" )
+	private Predicate expandInSingleParameter(SqmInListPredicate<?> sqmPredicate, SqmParameter<?> sqmParameter, QueryParameterImplementor<?> domainParam,
 			QueryParameterBinding<?> domainParamBinding) {
 		final Iterator<?> iterator = domainParamBinding.getBindValues().iterator();
 

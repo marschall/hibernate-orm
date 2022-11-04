@@ -38,6 +38,9 @@ import org.hibernate.query.SemanticException;
 import org.hibernate.query.spi.QueryEngine;
 import org.hibernate.query.sqm.IntervalType;
 import org.hibernate.query.sqm.TemporalUnit;
+import org.hibernate.query.sqm.function.NamedSqmFunctionDescriptor;
+import org.hibernate.query.sqm.produce.function.StandardArgumentsValidators;
+import org.hibernate.query.sqm.produce.function.StandardFunctionReturnTypeResolvers;
 import org.hibernate.sql.ast.SqlAstTranslator;
 import org.hibernate.sql.ast.SqlAstTranslatorFactory;
 import org.hibernate.sql.ast.spi.SqlAppender;
@@ -374,6 +377,15 @@ public class SpannerDialect extends Dialect {
 		queryEngine.getSqmFunctionRegistry().namedDescriptorBuilder( "array_reverse" )
 				.setExactArgumentCount( 1 )
 				.register();
+		queryEngine.getSqmFunctionRegistry().register(
+				"array_contains",
+				new NamedSqmFunctionDescriptor(
+						"UNNEST",
+						true,
+						StandardArgumentsValidators.exactly( 1 ),
+						StandardFunctionReturnTypeResolvers.impliedType()
+				)
+		);
 
 		// Date functions
 		queryEngine.getSqmFunctionRegistry().namedDescriptorBuilder( "date" )

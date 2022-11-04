@@ -48,6 +48,9 @@ import org.hibernate.query.spi.QueryEngine;
 import org.hibernate.query.sqm.IntervalType;
 import org.hibernate.query.sqm.NullOrdering;
 import org.hibernate.query.sqm.TemporalUnit;
+import org.hibernate.query.sqm.function.NamedSqmFunctionDescriptor;
+import org.hibernate.query.sqm.produce.function.StandardArgumentsValidators;
+import org.hibernate.query.sqm.produce.function.StandardFunctionReturnTypeResolvers;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.sql.ast.SqlAstTranslator;
 import org.hibernate.sql.ast.SqlAstTranslatorFactory;
@@ -413,6 +416,15 @@ public class CockroachDialect extends Dialect {
 		functionFactory.listagg_stringAgg( "string" );
 		functionFactory.inverseDistributionOrderedSetAggregates();
 		functionFactory.hypotheticalOrderedSetAggregates_windowEmulation();
+		queryEngine.getSqmFunctionRegistry().register(
+				"array_contains",
+				new NamedSqmFunctionDescriptor(
+						"ANY",
+						true,
+						StandardArgumentsValidators.exactly( 1 ),
+						StandardFunctionReturnTypeResolvers.impliedType()
+				)
+		);
 	}
 
 	@Override

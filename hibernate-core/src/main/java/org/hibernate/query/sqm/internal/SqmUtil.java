@@ -236,43 +236,13 @@ public class SqmUtil {
 					}
 				}
 				else if ( domainParamBinding.isMultiValued() ) {
-					final Collection<?> bindValues = domainParamBinding.getBindValues();
-					final Iterator<?> valueItr = bindValues.iterator();
-
-					// the original SqmParameter is the one we are processing.. create a binding for it..
-					for ( int i = 0; i < jdbcParamsBinds.size(); i++ ) {
-						final List<JdbcParameter> jdbcParams = jdbcParamsBinds.get( i );
-						createValueBindings(
-								jdbcParameterBindings,
-								queryParam,
-								domainParamBinding,
-								parameterType,
-								jdbcParams,
-								valueItr.next(),
-								tableGroupLocator,
-								session
-						);
+					if ( parameterType instanceof org.hibernate.type.BasicArrayType ) {
+						bindSingleValue( domainParamBinding, jdbcParamsBinds, jdbcParameterBindings, queryParam, parameterType, tableGroupLocator, session,
+								QueryParameterBinding::getBindValues );
 					}
-
-					// an then one for each of the expansions
-					final List<SqmParameter<?>> expansions = domainParameterXref.getExpansions( sqmParameter );
-					assert expansions.size() == bindValues.size() - 1;
-					int expansionPosition = 0;
-					while ( valueItr.hasNext() ) {
-						final SqmParameter<?> expansionSqmParam = expansions.get( expansionPosition++ );
-						final List<List<JdbcParameter>> jdbcParamBinds = jdbcParamMap.get( expansionSqmParam );
-						for ( int i = 0; i < jdbcParamBinds.size(); i++ ) {
-							List<JdbcParameter> expansionJdbcParams = jdbcParamBinds.get( i );
-							createValueBindings(
-									jdbcParameterBindings,
-									queryParam, domainParamBinding,
-									parameterType,
-									expansionJdbcParams,
-									valueItr.next(),
-									tableGroupLocator,
-									session
-							);
-						}
+					else {
+						bindMultipleValues( domainParamBinding, jdbcParamsBinds, jdbcParameterBindings, queryParam, parameterType, domainParameterXref, jdbcParamMap,
+								sqmParameter, tableGroupLocator, session );
 					}
 				}
 				else if ( domainParamBinding.getBindValue() == null ) {
@@ -288,53 +258,116 @@ public class SqmUtil {
 					}
 				}
 				else {
-					final JdbcMapping jdbcMapping;
-					if ( domainParamBinding.getType() instanceof JdbcMapping ) {
-						jdbcMapping = (JdbcMapping) domainParamBinding.getType();
-					}
-					else if ( domainParamBinding.getBindType() instanceof BasicValuedModelPart ) {
-						jdbcMapping = ( (BasicValuedModelPart) domainParamBinding.getType() ).getJdbcMapping();
-					}
-					else {
-						jdbcMapping = null;
-					}
-
-					final BasicValueConverter valueConverter = jdbcMapping == null ? null : jdbcMapping.getValueConverter();
-					if ( valueConverter != null ) {
-						final Object convertedValue = valueConverter.toRelationalValue( domainParamBinding.getBindValue() );
-
-						for ( int i = 0; i < jdbcParamsBinds.size(); i++ ) {
-							final List<JdbcParameter> jdbcParams = jdbcParamsBinds.get( i );
-							assert jdbcParams.size() == 1;
-							final JdbcParameter jdbcParameter = jdbcParams.get( 0 );
-							jdbcParameterBindings.addBinding(
-									jdbcParameter,
-									new JdbcParameterBindingImpl( jdbcMapping, convertedValue )
-							);
-						}
-
-						continue;
-					}
-
-					final Object bindValue = domainParamBinding.getBindValue();
-					for ( int i = 0; i < jdbcParamsBinds.size(); i++ ) {
-						final List<JdbcParameter> jdbcParams = jdbcParamsBinds.get( i );
-						createValueBindings(
-								jdbcParameterBindings,
-								queryParam,
-								domainParamBinding,
-								parameterType,
-								jdbcParams,
-								bindValue,
-								tableGroupLocator,
-								session
-						);
-					}
+					bindSingleValue( domainParamBinding, jdbcParamsBinds, jdbcParameterBindings, queryParam, parameterType, tableGroupLocator, session,
+							QueryParameterBinding::getBindValue );
 				}
 			}
 		}
 
 		return jdbcParameterBindings;
+	}
+
+	private static void bindMultipleValues(
+			QueryParameterBinding<?> domainParamBinding,
+			List<List<JdbcParameter>> jdbcParamsBinds,
+			JdbcParameterBindings jdbcParameterBindings,
+			QueryParameterImplementor<?> queryParam,
+			Bindable parameterType,
+			DomainParameterXref domainParameterXref,
+			Map<SqmParameter<?>, List<List<JdbcParameter>>> jdbcParamMap,
+			SqmParameter<?> sqmParameter,
+			Function<NavigablePath, TableGroup> tableGroupLocator,
+			SharedSessionContractImplementor session) {
+		final Collection<?> bindValues = domainParamBinding.getBindValues();
+		final Iterator<?> valueItr = bindValues.iterator();
+
+		// the original SqmParameter is the one we are processing.. create a binding for it..
+		for ( int i = 0; i < jdbcParamsBinds.size(); i++ ) {
+			final List<JdbcParameter> jdbcParams = jdbcParamsBinds.get( i );
+			createValueBindings(
+					jdbcParameterBindings,
+					queryParam,
+					domainParamBinding,
+					parameterType,
+					jdbcParams,
+					valueItr.next(),
+					tableGroupLocator,
+					session );
+		}
+
+		// an then one for each of the expansions
+		final List<SqmParameter<?>> expansions = domainParameterXref.getExpansions( sqmParameter );
+		assert expansions.size() == bindValues.size() - 1;
+		int expansionPosition = 0;
+		while ( valueItr.hasNext() ) {
+			final SqmParameter<?> expansionSqmParam = expansions.get( expansionPosition++ );
+			final List<List<JdbcParameter>> jdbcParamBinds = jdbcParamMap.get( expansionSqmParam );
+			for ( int i = 0; i < jdbcParamBinds.size(); i++ ) {
+				List<JdbcParameter> expansionJdbcParams = jdbcParamBinds.get( i );
+				createValueBindings(
+						jdbcParameterBindings,
+						queryParam, domainParamBinding,
+						parameterType,
+						expansionJdbcParams,
+						valueItr.next(),
+						tableGroupLocator,
+						session
+						);
+			}
+		}
+	}
+
+	private static void bindSingleValue(
+			QueryParameterBinding<?> domainParamBinding,
+			List<List<JdbcParameter>> jdbcParamsBinds,
+			JdbcParameterBindings jdbcParameterBindings,
+			QueryParameterImplementor<?> queryParam,
+			Bindable parameterType,
+			Function<NavigablePath, TableGroup> tableGroupLocator,
+			SharedSessionContractImplementor session,
+			Function<QueryParameterBinding<?>, ?> bindValueSupplier) {
+		final JdbcMapping jdbcMapping;
+		if ( domainParamBinding.getType() instanceof JdbcMapping ) {
+			jdbcMapping = (JdbcMapping) domainParamBinding.getType();
+		}
+		else if ( domainParamBinding.getBindType() instanceof BasicValuedModelPart ) {
+			jdbcMapping = ( (BasicValuedModelPart) domainParamBinding.getType() ).getJdbcMapping();
+		}
+		else {
+			jdbcMapping = null;
+		}
+
+		final BasicValueConverter valueConverter = jdbcMapping == null ? null : jdbcMapping.getValueConverter();
+		if ( valueConverter != null ) {
+			final Object convertedValue = valueConverter.toRelationalValue( domainParamBinding.getBindValue() );
+
+			for ( int i = 0; i < jdbcParamsBinds.size(); i++ ) {
+				final List<JdbcParameter> jdbcParams = jdbcParamsBinds.get( i );
+				assert jdbcParams.size() == 1;
+				final JdbcParameter jdbcParameter = jdbcParams.get( 0 );
+				jdbcParameterBindings.addBinding(
+						jdbcParameter,
+						new JdbcParameterBindingImpl( jdbcMapping, convertedValue )
+				);
+			}
+
+			return;
+		}
+
+		final Object bindValue = bindValueSupplier.apply(domainParamBinding);
+		for ( int i = 0; i < jdbcParamsBinds.size(); i++ ) {
+			final List<JdbcParameter> jdbcParams = jdbcParamsBinds.get( i );
+			createValueBindings(
+					jdbcParameterBindings,
+					queryParam,
+					domainParamBinding,
+					parameterType,
+					jdbcParams,
+					bindValue,
+					tableGroupLocator,
+					session
+			);
+		}
 	}
 
 	private static void createValueBindings(

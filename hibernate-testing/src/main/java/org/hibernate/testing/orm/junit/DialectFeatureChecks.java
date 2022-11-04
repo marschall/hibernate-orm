@@ -633,4 +633,10 @@ abstract public class DialectFeatureChecks {
 			}
 		}
 	}
+
+	public static class SupportsStandardArrays implements DialectFeatureCheck {
+		public boolean apply(Dialect dialect) {
+			return dialect.supportsStandardArrays();
+		}
+	}
 }

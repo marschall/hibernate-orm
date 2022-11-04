@@ -14,8 +14,10 @@ import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.testing.TestForIssue;
 import org.hibernate.testing.jdbc.SQLStatementInspector;
 import org.hibernate.testing.orm.jdbc.DefaultSQLStatementInspectorSettingProvider;
+import org.hibernate.testing.orm.junit.DialectFeatureChecks;
 import org.hibernate.testing.orm.junit.EntityManagerFactoryScope;
 import org.hibernate.testing.orm.junit.Jpa;
+import org.hibernate.testing.orm.junit.RequiresDialectFeature;
 import org.hibernate.testing.orm.junit.Setting;
 import org.hibernate.testing.orm.junit.SettingProvider;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,6 +38,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @author Vlad Mihalcea
  */
 @TestForIssue(jiraKey = "HHH-13108")
+@RequiresDialectFeature(
+		feature = DialectFeatureChecks.SupportsStandardArrays.class,
+		reverse = true,
+		comment = "arrays supersede in clause parameter padding ")
 @Jpa(
 		annotatedClasses = InClauseParameterPaddingCriteriaTest.Document.class,
 		integrationSettings = {

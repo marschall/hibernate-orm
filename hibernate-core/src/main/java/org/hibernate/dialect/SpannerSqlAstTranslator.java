@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.hibernate.LockMode;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.metamodel.mapping.JdbcMappingContainer;
 import org.hibernate.query.sqm.ComparisonOperator;
 import org.hibernate.sql.ast.Clause;
 import org.hibernate.sql.ast.spi.AbstractSqlAstTranslator;
@@ -28,6 +29,7 @@ import org.hibernate.sql.ast.tree.select.QueryPart;
 import org.hibernate.sql.ast.tree.select.QuerySpec;
 import org.hibernate.sql.ast.tree.select.SelectClause;
 import org.hibernate.sql.exec.spi.JdbcOperation;
+import org.hibernate.type.SqlTypes;
 
 /**
  * A SQL AST translator for Spanner.
@@ -63,6 +65,23 @@ public class SpannerSqlAstTranslator<T extends JdbcOperation> extends AbstractSq
 
 	@Override
 	protected void renderComparison(Expression lhs, ComparisonOperator operator, Expression rhs) {
+		final JdbcMappingContainer lhsExpressionType = lhs.getExpressionType();
+		if ( lhsExpressionType != null && lhsExpressionType.getJdbcMappings().get( 0 ).getJdbcType().getDdlTypeCode() == SqlTypes.ARRAY ) {
+			switch ( operator ) {
+				case EQUAL:
+					lhs.accept( this );
+					appendSql( " IN(" );
+					rhs.accept( this );
+					appendSql( ')' );
+					break;
+				case NOT_EQUAL:
+					lhs.accept( this );
+					appendSql( " NOT IN(" );
+					rhs.accept( this );
+					appendSql( ')' );
+					break;
+			}
+		}
 		renderComparisonEmulateIntersect( lhs, operator, rhs );
 	}
 

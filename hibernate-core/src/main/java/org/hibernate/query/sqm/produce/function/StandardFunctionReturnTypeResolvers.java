@@ -114,6 +114,20 @@ public class StandardFunctionReturnTypeResolvers {
 			}
 		};
 	}
+	
+	public static FunctionReturnTypeResolver impliedType() {
+		return new FunctionReturnTypeResolver() {
+			@Override
+			public BasicValuedMapping resolveFunctionReturnType(Supplier<BasicValuedMapping> impliedTypeAccess, List<? extends SqlAstNode> arguments) {
+				return impliedTypeAccess.get();
+			}
+			
+			@Override
+			public ReturnableType<?> resolveFunctionReturnType(ReturnableType<?> impliedType, List<? extends SqmTypedNode<?>> arguments, TypeConfiguration typeConfiguration) {
+				return impliedType;
+			}
+		};
+	}
 
 
 
