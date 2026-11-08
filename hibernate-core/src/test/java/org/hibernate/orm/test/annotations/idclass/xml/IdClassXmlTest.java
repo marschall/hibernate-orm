@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.hibernate.community.dialect.AltibaseDialect;
 import org.hibernate.testing.orm.junit.DomainModel;
+import org.hibernate.testing.orm.junit.JiraKey;
 import org.hibernate.testing.orm.junit.SessionFactory;
 import org.hibernate.testing.orm.junit.SessionFactoryScope;
 import org.hibernate.testing.orm.junit.SkipForDialect;
@@ -17,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *
  * @author Hardy Ferentschik
  */
-//@FailureExpected( jiraKey = "HHH-4282" )
+@JiraKey( "HHH-4282" )
 @DomainModel(
 		annotatedClasses = HabitatSpeciesLink.class,
 		xmlMappings = "org/hibernate/orm/test/annotations/idclass/xml/HabitatSpeciesLink.xml"

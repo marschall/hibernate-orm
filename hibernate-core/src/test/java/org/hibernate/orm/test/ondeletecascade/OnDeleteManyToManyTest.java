@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 		{OnDeleteManyToManyTest.A.class,
 		OnDeleteManyToManyTest.B.class},
 		useCollectingStatementInspector = true)
-//@RequiresDialectFeature(feature = DialectFeatureChecks.SupportsCascadeDeleteCheck.class)
 class OnDeleteManyToManyTest {
 	@Test void test(EntityManagerFactoryScope scope) {
 		var inspector = scope.getCollectingStatementInspector();

@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SuppressWarnings("JUnitMalformedDeclaration")
 @DomainModel(annotatedClasses = FormulaGeneratedTest.OrderLine.class)
 @SessionFactory
-//@ServiceRegistry(settings = @Setting(name = USE_GET_GENERATED_KEYS, value = "false"))
 public class FormulaGeneratedTest {
 
 	@Test

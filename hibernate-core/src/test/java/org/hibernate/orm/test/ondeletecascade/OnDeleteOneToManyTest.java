@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 @Jpa(annotatedClasses =
 		{OnDeleteOneToManyTest.Parent.class, OnDeleteOneToManyTest.Child.class},
 		useCollectingStatementInspector = true)
-//@RequiresDialectFeature(feature = DialectFeatureChecks.SupportsCascadeDeleteCheck.class)
 public class OnDeleteOneToManyTest {
 	@Test
 	public void testOnDeleteParent(EntityManagerFactoryScope scope) {

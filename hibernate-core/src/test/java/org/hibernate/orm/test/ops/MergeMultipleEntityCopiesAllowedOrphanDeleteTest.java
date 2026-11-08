@@ -6,6 +6,7 @@ import org.hibernate.cfg.AvailableSettings;
 
 import org.hibernate.testing.orm.junit.DomainModel;
 import org.hibernate.testing.orm.junit.FailureExpected;
+import org.hibernate.testing.orm.junit.JiraKey;
 import org.hibernate.testing.orm.junit.ServiceRegistry;
 import org.hibernate.testing.orm.junit.SessionFactory;
 import org.hibernate.testing.orm.junit.SessionFactoryScope;
@@ -143,7 +144,7 @@ public class MergeMultipleEntityCopiesAllowedOrphanDeleteTest {
 	}
 
 	@Test
-	//@FailureExpected( jiraKey = "HHH-9106" )
+	@JiraKey( "HHH-9106" )
 	public void testTopLevelUnidirOneToManyBackrefWithRemovedElement(SessionFactoryScope scope) {
 		Item item1 = new Item();
 		item1.setName( "item1 name" );
@@ -255,7 +256,7 @@ public class MergeMultipleEntityCopiesAllowedOrphanDeleteTest {
 	}
 
 	@Test
-	//@FailureExpected( jiraKey = "HHH-9106" )
+	@JiraKey( "HHH-9106" )
 	public void testTopLevelUnidirOneToManyNoBackrefWithNewElement(SessionFactoryScope scope) {
 		Category category1 = new Category();
 		category1.setName( "category1 name" );
@@ -353,7 +354,7 @@ public class MergeMultipleEntityCopiesAllowedOrphanDeleteTest {
 	}
 
 	@Test
-	//@FailureExpected( jiraKey = "HHH-9106" )
+	@JiraKey( "HHH-9106" )
 	public void testTopLevelUnidirOneToManyNoBackrefWithRemovedElement(SessionFactoryScope scope) {
 		Category category1 = new Category();
 		category1.setName( "category1 name" );

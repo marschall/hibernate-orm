@@ -29,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 		OnDeleteCascadeRemoveTest.Child.class},
 		generateStatistics = true,
 		useCollectingStatementInspector = true)
-//@RequiresDialectFeature(feature = DialectFeatureChecks.SupportsCascadeDeleteCheck.class)
 class OnDeleteCascadeRemoveTest {
 	@Test
 	void testOnDeleteCascadeRemove1(EntityManagerFactoryScope scope) {

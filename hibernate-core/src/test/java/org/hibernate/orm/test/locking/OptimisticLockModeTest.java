@@ -30,8 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * @author Steve Ebersole
  */
 @JiraKey( value = "HHH-5275")
-//@SkipForDialect(dialectClass = SybaseASEDialect.class, majorVersion = 15,
-//		reason = "skip this test on Sybase ASE 15.5, but run it on 15.7, see HHH-6820")
 @RequiresDialectFeature(feature = DialectFeatureChecks.SupportsConcurrentTransactions.class)
 public class OptimisticLockModeTest extends BaseSessionFactoryFunctionalTest {
 
