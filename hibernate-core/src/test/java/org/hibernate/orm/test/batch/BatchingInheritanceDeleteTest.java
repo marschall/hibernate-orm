@@ -47,7 +47,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class BatchingInheritanceDeleteTest {
 
 	@Test
-	//@FailureExpected( jiraKey = "HHH-12470" )
 	public void testDelete(SessionFactoryScope scope) {
 		scope.inTransaction( s -> {
 			Bar bar = new Bar( "bar" );

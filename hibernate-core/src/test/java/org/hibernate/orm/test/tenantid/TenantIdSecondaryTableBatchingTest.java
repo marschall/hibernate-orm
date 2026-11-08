@@ -134,10 +134,6 @@ class TenantIdSecondaryTableBatchingTest implements ServiceRegistryProducer {
 		}
 		assertEquals( checksOwner ? 0 : 3, additions );
 		int expectedBatches = checksOwner ? 0 : 1;
-		if ( stateless && type == Tenant.class && tenant.equals( "mine" ) ) {
-			// Each existing stateless ownership select flushes the preceding batch.
-			expectedBatches = 3;
-		}
 		assertEquals( expectedBatches, batches );
 		assertEquals( checksOwner ? 3 : 0, updates );
 		inTenant( scope, "mine", session -> {
